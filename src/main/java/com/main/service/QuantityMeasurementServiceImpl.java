@@ -14,13 +14,45 @@ import org.springframework.stereotype.Service;
 @Service
 public class QuantityMeasurementServiceImpl implements QuantityMeasurementService{
 
+    private final QuantityMeasurementRepository quantityMeasurementRepository;
+
+    QuantityMeasurementServiceImpl(QuantityMeasurementRepository quantityMeasurementRepository) {
+        this.quantityMeasurementRepository = quantityMeasurementRepository;
+    }
+
+    private double convertToBase(QuantityDTO dto) {
+        if (MeasurementType.LENGTH.getMeasurementType().equalsIgnoreCase(dto.getType())) {
+            return LengthUnit.valueOf(dto.getUnit()).toBase(dto.getValue());
+        } else if (MeasurementType.WEIGHT.getMeasurementType().equalsIgnoreCase(dto.getType())) {
+            return WeightUnit.valueOf(dto.getUnit()).toBase(dto.getValue());
+        }
+        throw new QuantityMeasurementException("Invalid Type");
+    }
+
     @Override
     public double add(QuantityDTO q1, QuantityDTO q2) {
-        return 0d;
+        if (!q1.getType().equals(q2.getType())) {
+            throw new QuantityMeasurementException("Different types not allowed");
+        }
+
+        double result = convertToBase(q1) + convertToBase(q2);
+
+        quantityMeasurementRepository.save(new QuantityMeasurement(
+                new Quantity(q1.getValue(), q1.getUnit(), q1.getType()),
+                new Quantity(q2.getValue(), q2.getUnit(), q2.getType()),
+                ArithmeticOperationEnum.ADD.getOperation(),
+                result
+        ));
+
+        return result;
     }
 
     @Override
     public boolean compare(QuantityDTO q1, QuantityDTO q2) {
-        return true;
+        if (!q1.getType().equals(q2.getType())) {
+            throw new QuantityMeasurementException("Different types not allowed");
+        }
+
+        return convertToBase(q1) == convertToBase(q2);
     }
 }
